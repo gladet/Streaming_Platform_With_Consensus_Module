@@ -1,0 +1,14 @@
+/CandThread.class
+/ClientInfo.class
+/ClientThread.class
+/FollowerThread.class
+/LeaderThread.class
+/ListenThread.class
+/LogEntry.class
+/RaftData.class
+/Record.class
+/ServerData.class
+/ServerInfo.class
+/ServerThread.class
+/client.class
+/server.class

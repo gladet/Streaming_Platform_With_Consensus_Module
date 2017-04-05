@@ -1,0 +1,4 @@
+workable version
+follower timeout: 150,000 ms
+candidate timeout: 150,000 ms
+leader heartbeat interval: 4,500 ms

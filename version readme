@@ -1,0 +1,54 @@
+client->kill server->NoSuchElementException
+
+server->kill client->NullPointerException
+
+check->InetAddress->getLocalHost().getLocalAddress()
+
+write the client thread class
+
+rename clientworker -> serverthread
+
+test->client killed->server thread->readline->null 
+client->return->readline->””
+
+upgrade from 15.1->debugged
+
+work on message to subscribers after calling [subscribe] -> basically OKAY 
+
+WORK on server killed->client should detect and write to the local file
+
+when a client send the add command to servers, servers forward the add command to other clients except the original message sender
+
+try to clean up the files and fix the bugs
+
+fixed a bug in the clientserver->listen->while(true)->in.get(i).readline->here i<servers.size -> server.size may change -> should be in.size() 
+
+try to work on remove a server, the request is initiate by a client, all the servers would receive the command, delete the server from [servers]. the to be deleted server will send message to all the connected clients, the clients will close the socket associate with this server and delete this server from [servers]. finally the to be delete server will exit.
+
+rewrite the constructor method of ClientThread, add one argument->svrInfo, which is used to create a socket to connect to the server, this socket is used to listen to the message from the server like update after subscribe cmd, add, delete, restart, here one thread only contains one socket corresponding to the svrInfo. 
+
+move the while loop for user input to the main method of client.java. a major part in this while loop is the code block dealing with the local input add cmd, which includes both the add cmd at the start stage of the client program and the later add cmd during the execution of the client program.
+
+clear up the /**/ and // blocks
+
+create helper methods in SvrThread->doListen, doRestart, doAdd, doDel
+
+try to create backup for the topics->publish->get->tested->passed
+
+work on remove topic and unsubscribe topic -> tested -> passed
+
+try to build the svrData class -> done -> fix the bug of depublish -> backupSvr -> else if -> !nopartnum case
+
+try to build the class for consistent hashing
+
+work on the part relocation - interim version
+
+continue working on part reloc -> add/delete server -> tested
+
+killed->restart-> recover from local files -> data/info -> tested
+
+work on recover from backup server -> update data/info
+
+backup after add/delete
+
+work on backup when add/delete servers->build a separate backup topics
