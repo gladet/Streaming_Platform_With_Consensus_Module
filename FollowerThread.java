@@ -55,18 +55,26 @@ public class FollowerThread extends Thread {
 		Random randomInterval = new Random();
 		long timeoutInterval = 7000;//15000;//150000;//150;//4500;//
 		timeoutInterval += randomInterval.nextInt(7000);//7000;//150
+		raftData.setTimeoutInterval(timeoutInterval);
 		//followerStartTime = new GregorianCalendar().getTimeInMillis();
 		raftData.setFollowerStartTime(followerStartTime = new GregorianCalendar().getTimeInMillis());
-		//Thread.sleep(timeoutInterval-150);
-		/*try {
-			Thread.sleep(timeoutInterval-150);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
 		while(!timeout) {
-			long currTime = new GregorianCalendar().getTimeInMillis();//get the current system time
 			followerStartTime = raftData.getFollowerStartTime();//update followerStartTime with raftData's followerStartTime
+			long interval = (long) (timeoutInterval/10);
+			long currTime = new GregorianCalendar().getTimeInMillis();//get the current system time
+			if(currTime - followerStartTime < interval) {
+				//Thread.sleep(timeoutInterval-150);
+				try {
+					Thread.sleep(timeoutInterval-interval-120);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			followerStartTime = raftData.getFollowerStartTime();//update followerStartTime with raftData's followerStartTime
+			//currTime = System.currentTimeMillis();//get the current system time
+			currTime = new GregorianCalendar().getTimeInMillis();//get the current system time
 			if(currTime - followerStartTime > timeoutInterval) {
 				state = CANDIDATE;//switch to the candidate state
 				System.out.println("[FollowerThread run] DEBUG: Switched to CANDIDATE state");

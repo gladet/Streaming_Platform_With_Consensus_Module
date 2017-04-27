@@ -254,7 +254,7 @@ public class ListenThread extends Thread {
 		int lastLogTerm = log.get(log.size()-1).getTerm();
 		currTerm = raftData.getCurrTerm();
 		String message = serverName+" "+"reqvote"+" "+currTerm+" "+lastLogIndex+" "+lastLogTerm;//the requestVote message to send to other servers
-		System.out.println("DEBUG: " + message);
+		System.out.println("[reqVoteRPC] DEBUG: request vote message: " + message);
 		//send the requestVote message to each and every server including itself
 		for(int i = 0; i < servers.size(); i++) {
 			reqVoteMsg(servers.get(i), message);
@@ -272,10 +272,10 @@ public class ListenThread extends Thread {
 			outSvr.close();
 			currSocket.close();
 		} catch (UnknownHostException e) {
-			System.err.println("Cannot connect to " + server.getName());
+			System.err.println("[reqVoteMsg] DEBUG: Cannot connect to " + server.getName());
 			//System.exit(1);
 		} catch (IOException e) {
-			System.err.println("Cannot connect to " + server.getName());
+			System.err.println("[reqVoteMsg] DEBUG: Cannot connect to " + server.getName());
 			//System.exit(1);
 		}
 	}
@@ -310,12 +310,17 @@ public class ListenThread extends Thread {
 						procReplyAppend(lineScanner);
 					}
 				}
+				else {
+					System.out.println("[ListenThread run] DEBUG: disconnected with " + svrInfo.getName());
+					socket.close();
+					return;
+				}
 			}
 		} catch (UnknownHostException e) {
-			System.err.println("cannot connect to: " + svrInfo.getName());
+			System.err.println("[ListenThread run] DEBUG: cannot connect to: " + svrInfo.getName());
 			System.exit(1);
 		} catch (IOException e) {
-			System.err.println("cannot connect to: " + svrInfo.getName());
+			System.err.println("[ListenThread run] DEBUG: cannot connect to: " + svrInfo.getName());
 			System.exit(1);
 		}
 	}

@@ -30,18 +30,21 @@ public class ClientThread implements Runnable {
 				PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 				BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 				
-				System.out.println(clientName + "> " + "Client: The address of the endpoint the client socket [" + svrInfo.getName() + "] is bound to " + socket.getLocalSocketAddress());//the address info. of the local sockets
-				System.out.println(clientName + "> " + "DEBUG: " + clientName + " " + socket.getInetAddress().getHostAddress() + " " + socket.getLocalPort());
+				//System.out.println("[ClientThread run] DEBUG: " + clientName + "> " + "Client: The address of the endpoint the client socket [" + svrInfo.getName() + "] is bound to " + socket.getLocalSocketAddress());//the address info. of the local sockets
+				//System.out.println("[ClientThread run] DEBUG: " + clientName + "> " + "DEBUG: " + clientName + " " + socket.getInetAddress().getHostAddress() + " " + socket.getLocalPort());
 				out.println(clientName + " " + "listen" + " " + clientName + " " + socket.getInetAddress().getHostAddress() + " " + socket.getLocalPort()); //send the client info to the servers
 				
 				while(true) {
 					fromServer = in.readLine();
 					if(fromServer == null) {
 						//System.out.println(clientName + "> " + svrInfo.getName() + ": " + fromServer);
+						System.out.println("[ClientThread run] DEBUG: disconnected with " + svrInfo.getName());
+						socket.close();
+						return;
 					}
 					else {
 						//System.out.println("Client: " + line);
-						System.out.println(clientName + "> " + svrInfo.getName() + ": " + fromServer);
+						System.out.println(clientName + "> [ClientThread run] DEBUG: message from " + svrInfo.getName() + ": " + fromServer);
 						Scanner lineScanner = new Scanner(fromServer);
 						//lineScanner = new Scanner(line);
 						String cmd = "";
@@ -68,10 +71,10 @@ public class ClientThread implements Runnable {
 				
 			}
 		} catch (UnknownHostException e) {
-			System.err.println("Don't know about host ");
+			System.err.println("[ClientThread run] DEBUG: cannot connect to: " + svrInfo.getName());
 			System.exit(1);
 		} catch (IOException e) {
-			System.err.println("Don't know about host ");
+			System.err.println("[ClientThread run] DEBUG: cannot connect to: " + svrInfo.getName());
 			System.exit(1);
 		}
 	}
@@ -107,7 +110,7 @@ public class ClientThread implements Runnable {
 			int serverPort = Integer.parseInt(portStr.substring(0, portStr.length()-1));//skip the ')'
 			servers.add(new ServerInfo(serverName, serverIP, serverPort));//add the ServerInfo into the servers
 			currSvrs.add(new ServerInfo(serverName, serverIP, serverPort));
-			System.out.println(clientName + "> " + "DEBUG: " + serverName + " " + serverIP + " " + serverPort);
+			System.out.println(clientName + "> " + "[doLtnAdd] DEBUG: " + serverName + " " + serverIP + " " + serverPort);
 		}
 		
 		//connect to the newly added servers
@@ -133,7 +136,7 @@ public class ClientThread implements Runnable {
 					servers.remove(j);//remove this server's info from servers
 				}
 			}
-			System.out.println(clientName + "> " + "DEBUG: " + serverName + " " + serverIP + " " + serverPort + " deleted");
+			System.out.println(clientName + "> " + "[doLtnDel] DEBUG: " + serverName + " " + serverIP + " " + serverPort + " deleted");
 		}
 	}
 }

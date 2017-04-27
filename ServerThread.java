@@ -309,6 +309,9 @@ class ServerThread implements Runnable {
 		*/
 		if(cmd.equalsIgnoreCase("replyappend")) {
 			procReplyAppend(lineScanner, clientName);
+			
+			writeData();
+			writeInfo();
 		}
 		
 		if(cmd.equalsIgnoreCase("append")) {
@@ -317,6 +320,9 @@ class ServerThread implements Runnable {
 			out.close();
 			in.close();
 			client.close();
+			
+			writeData();
+			writeInfo();
 		}
 		
 		if(cmd.equalsIgnoreCase("reqvote")) {
@@ -334,6 +340,9 @@ class ServerThread implements Runnable {
 			out.close();
 			in.close();
 			client.close();
+			
+			writeData();
+			writeInfo();
 		}
 		
 		//Receive and store topics and svrPartMap from the reverse-backup server
@@ -343,6 +352,9 @@ class ServerThread implements Runnable {
 			out.close();
 			in.close();
 			client.close();
+			
+			writeData();
+			writeInfo();
 		}
 		
 		//receive and store the partition from another server
@@ -352,6 +364,9 @@ class ServerThread implements Runnable {
 			out.close();
 			in.close();
 			client.close();
+			
+			writeData();
+			writeInfo();
 		}
 		
 		//set up the listen channel to a server
@@ -365,10 +380,10 @@ class ServerThread implements Runnable {
 			out.close();
 			in.close();
 			client.close();
+			
+			writeData();
+			writeInfo();
 		}
-		
-		writeData();
-		writeInfo();
 	}
 	
 	private void procAppend(BufferedReader in, Scanner lineScanner, String clientName) throws IOException {
@@ -387,15 +402,30 @@ class ServerThread implements Runnable {
 				//new FollowerThread(localServerName, state, votes, numReplyVote, log, servers, followerStartTime).start();
 				//start a new FollowerThread for monitoring heartbeat
 				//new FollowerThread(localServerName, state, currTerm, votes, numReplyVote, log, servers, followerStartTime).start();
-				new FollowerThread(localServerName, servers, raftData).start();
+				//new FollowerThread(localServerName, servers, raftData).start();
+				FollowerThread followerThread = new FollowerThread(localServerName, servers, raftData);
+				followerThread.start();
+				raftData.setFollowerThread(followerThread);
 			}
 			if((state=raftData.getState()) == FOLLOWER) {
 				followerStartTime = new GregorianCalendar().getTimeInMillis();//reset the election timeout
 				raftData.setFollowerStartTime(followerStartTime);//reset followerStartTime in raftData
+				/*
+				//try the wait method of the followerThread
+				FollowerThread followerThread = raftData.getFollowerThread();
+				//followerThread.wait(raftData.getTimeoutInterval()-150);
+				try {
+					//followerThread.wait(raftData.getTimeoutInterval()-150);
+					followerThread.sleep(raftData.getTimeoutInterval()-150);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}*/
 			}
 			int leaderPrevLogIndex = lineScanner.nextInt();
 			int leaderPrevLogTerm = lineScanner.nextInt();
 			int leaderCommit = lineScanner.nextInt();
+			
 			int prevLogTerm = 0;
 			if(leaderPrevLogIndex >= log.size()) {//log has no entry at leaderPrevLogIndex yet
 				append = 0;
@@ -444,6 +474,9 @@ class ServerThread implements Runnable {
 			//update committedIndex after new entries replicated
 			committedIndex = Math.min(leaderCommit, log.size() - 1);
 			raftData.setCommittedIndex(committedIndex);
+			
+			//System.out.println("[procAppend] DEBUG: committedIndex: " + raftData.getCommittedIndex());
+		
 			//should apply the newly committed commands to the state machine
 			int lastApplied = raftData.getLastApplied();
 			//apply the newly committed entries to the state machine -> execute the client commands in the newly committed entries
@@ -520,7 +553,10 @@ class ServerThread implements Runnable {
 			state = FOLLOWER;//switch to FOLLOWER state
 			raftData.setState(state);//reset the state in raftData
 			System.out.println("[procReplyAppend] DEBUG: Switched to FOLLOWER state");
-			new FollowerThread(localServerName, servers, raftData).start();
+			//new FollowerThread(localServerName, servers, raftData).start();
+			FollowerThread followerThread = new FollowerThread(localServerName, servers, raftData);
+			followerThread.start();
+			raftData.setFollowerThread(followerThread);
 			return;
 		}
 		//identify the replyAppend message sender server
@@ -945,7 +981,8 @@ class ServerThread implements Runnable {
 		String outFileName = null;
 		try {
 			//String localDir = "/tmp/92476/stream";
-			String localDir = "/Users/gladet/csc502/stream";
+			//String localDir = "/Users/gladet/csc502/stream";
+			String localDir = "../stream";
 			outFileName = localDir+"/"+localServerName+"_data";
 			
 			outTopics = new PrintWriter(outFileName);
@@ -997,7 +1034,8 @@ class ServerThread implements Runnable {
 		String outFileName = null;
 		try {
 			//String localDir = "/tmp/92476/stream";
-			String localDir = "/Users/gladet/csc502/stream";
+			//String localDir = "/Users/gladet/csc502/stream";
+			String localDir = "../stream";
 			outFileName = localDir+"/"+localServerName+"_info";
 			
 			outInfo = new PrintWriter(outFileName);
@@ -1343,7 +1381,8 @@ class ServerThread implements Runnable {
 			//initialize the clientsInfo file reader
 			try {
 				//String localDir = "/tmp/92476/stream";
-				String localDir = "/Users/gladet/csc502/stream";
+				//String localDir = "/Users/gladet/csc502/stream";
+				String localDir = "../stream";
 				
 				outFileName = localDir + "/clientsInfo";
 				
@@ -1525,6 +1564,38 @@ class ServerThread implements Runnable {
 			if(serverName.equals(servers.get(i).getName())&&(serverPort!=servers.get(i).getPort())) {
 				//servers.get(i) = new serversInfo(serverName, servers.get(i).getIP(), serverPort);
 				servers.get(i).setPort(serverPort);
+				
+				//write the restarted server's new port number to serversInfo
+				String outFileName = null;
+				PrintWriter outServers = null;
+				
+				//initialize the serversInfo file reader
+				try {
+					//localDir = "/tmp/92476/stream";
+					//localDir = "/Users/gladet/csc502/stream";
+					String localDir = "../stream";
+					outFileName = localDir+"/serversInfo";
+					
+					//outFileName = "serversInfo"; //the local file to store the servers info, using relative path
+					outServers = new PrintWriter(outFileName);
+				}catch (FileNotFoundException exception) {
+					System.out.println("[server main] DEBUG: ERROR: output file [" + outFileName + "] does not exist");
+				}
+				outServers.println(servers.size());//write the number of servers into local file
+				for(int j = 0; j < servers.size(); j++) {//2 servers
+					outServers.println(servers.get(j).getName() + " " + servers.get(j).getIP() + " " + servers.get(j).getPort());//write the servers' info to the local file
+				}
+				outServers.close();//close the out stream when no more info to write to the local file
+				
+				//chmod 777
+				try {
+					File file = new File(outFileName);
+					Runtime.getRuntime().exec("chmod 777 " + outFileName);
+				} catch(IOException e) {
+					e.printStackTrace();
+				}
+				//***
+				
 				//listen to the restarted server again
 				new ListenThread(localServerName, servers, servers.get(i), raftData).start();
 				out.println(localServerName + " got restart message from " + serverName);//ack message
@@ -1532,7 +1603,7 @@ class ServerThread implements Runnable {
 				String backupSvrName = backupSvr(serverName);
 				//localServerName is the backup server of the restarted server, send data/info to the restarted server for recovery
 				if(localServerName.equals(backupSvrName)) {
-					doRestartUpdate(out);//update the restarted server with the data and info of the stream platform
+					//doRestartUpdate(out);//update the restarted server with the data and info of the stream platform
 					
 					//boardcast to all the clients the restarted server's info
 					for(Map.Entry<String, Socket> entry: clientSockets.entrySet()) {
@@ -1551,7 +1622,7 @@ class ServerThread implements Runnable {
 				String rvBkpSvr = backupSvr(localServerName);
 				if(serverName.equals(rvBkpSvr)) {
 					//restarted server is the backup server of localServerName -> send topics and svrPartMap to restarted server for backup
-					doSendBkp(out);
+					//doSendBkp(out);
 				}
 				//out.println(localServerName + " got restart message from " + serverName);//ack message
 				break;
@@ -1600,14 +1671,18 @@ class ServerThread implements Runnable {
 		//new FollowerThread(localServerName, svrData.getState(), svrData.getCurrTerm(), svrData.getVotes(), svrData.getNumReplyVote(), svrData.getLog(), svrData.getServers(), svrData.getFollowerStartTime()).start();
 		//new FollowerThread(localServerName, state, currTerm, votes, numReplyVote, log, servers, followerStartTime).start();
 		if(newAdd) {
-			new FollowerThread(localServerName, servers, raftData).start();
+			//new FollowerThread(localServerName, servers, raftData).start();
+			FollowerThread followerThread = new FollowerThread(localServerName, servers, raftData);
+			followerThread.start();
+			raftData.setFollowerThread(followerThread);
 		}
 		//new FollowerThread(localServerName, servers, raftData).start();
 		
 		//initialize the serversInfo file reader
 		try {
 			//String localDir = "/tmp/92476/stream";
-			String localDir = "/Users/gladet/csc502/stream";
+			//String localDir = "/Users/gladet/csc502/stream";
+			String localDir = "../stream";
 			outFileName = localDir+"/serversInfo";
 			
 			//outFileName = "serversInfo"; //the local file to store the servers info, using relative path
@@ -1652,6 +1727,7 @@ class ServerThread implements Runnable {
 		//redistribute the partitions
 		//doPartReloc();
 		
+		/* //NOT backup the reverse-backup server after deploying consensus mdoule
 		if(newAdd&&(servers.size()>1)) {
 			// check if localServerName is the backup server of servers.get(i)->if YES->ask servers.get(i) to send topics and svrPartMap for backup
 			for(int i = 0; i < servers.size(); i++) {
@@ -1665,18 +1741,19 @@ class ServerThread implements Runnable {
 						Scanner inSvr = new Scanner(currSocket.getInputStream());
 						addBkp(outSvr, inSvr, servers.get(i).getName());
 					} catch (UnknownHostException e) {
-						System.err.println("Cannot connect to " + servers.get(i).getName());
+						System.err.println("[doAdd] DEBUG: Cannot connect to " + servers.get(i).getName());
 						//System.exit(1);
 					} catch (IOException e) {
-						System.err.println("Cannot connect to " + servers.get(i).getName());
+						System.err.println("[doAdd] DEBUG: Cannot connect to " + servers.get(i).getName());
 						//System.exit(1);
 					}
 				}
 			}
-			
+		
 			//generate the svrPartMap
 			//genSvrPartMap();
 		}
+		*/
 		
 		//doBackup();//send the topics to the backup server fror backup
 	}
@@ -2153,7 +2230,8 @@ class ServerThread implements Runnable {
 		//initialize the serversInfo file reader
 		try {
 			//String localDir = "/tmp/92476/stream";
-			String localDir = "/Users/gladet/csc502/stream";
+			//String localDir = "/Users/gladet/csc502/stream";
+			String localDir = "../stream";
 			outFileName = localDir+"/serversInfo";
 			
 			//outFileName = "serversInfo"; //the local file to store the servers info, using relative path

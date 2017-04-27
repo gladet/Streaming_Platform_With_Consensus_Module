@@ -8,7 +8,7 @@ public class client {
 		
 		if (args.length != 1) { // currently 1 arguments: client name
 			System.err.println(
-												 "missing argument: client name");
+												 "ERROR: missing argument: client name");
 			System.exit(1);
 		}
 		
@@ -20,12 +20,13 @@ public class client {
 		
 		Scanner inServers = null;
 		//String localDir = "/tmp/92476/stream";
-		String localDir = "/Users/gladet/csc502/stream";
+		//String localDir = "/Users/gladet/csc502/stream";
+		String localDir = "../stream";
 		String inFileName = localDir+"/serversInfo"; //the local file to store the servers info, using absolute path
 		try {
 			inServers = new Scanner(new File(inFileName));
 		}catch (FileNotFoundException exception) {
-			System.out.println(clientName + "> " + "DEBUG: input file [" + inFileName + "] does not exist");
+			System.out.println(clientName + "> " + "[main] DEBUG: input file [" + inFileName + "] does not exist");
 			hasSvrsFile = false;//no serversInfo file yet
 		}
 		
@@ -41,7 +42,7 @@ public class client {
 				int serverPort = inServers.nextInt();
 				servers.add(new ServerInfo(serverName, serverIP, serverPort));//add the ServerInfo into the servers
 																																			//lineScanner.hasChar(); //read ')'
-				System.out.println(clientName + "> " + "DEBUG: " + serverName + " " + serverIP + " " + serverPort);
+				System.out.println(clientName + "> " + "[main] DEBUG: " + serverName + " " + serverIP + " " + serverPort);
 			}
 			inServers.close();//close the scanner when no more info to read
 			
@@ -63,7 +64,7 @@ public class client {
 				//wait for user input
 				fromUser = stdIn.readLine();
 				if (fromUser != null) {// what is the case that fromUser == null
-					System.out.println(clientName + "> " + "Client: " + fromUser);
+					System.out.println(clientName + "> " + "[main] DEBUG: user input: " + fromUser);
 					
 					if (fromUser.equalsIgnoreCase("quit"))//quit the client program
 					{
@@ -75,10 +76,10 @@ public class client {
 								out.close();
 								socket.close();
 							} catch (UnknownHostException e) {
-								System.err.println("Cannot connect to " + servers.get(i).getName());
+								System.err.println("[main] DEBUG: Cannot connect to " + servers.get(i).getName());
 								System.exit(1);
 							} catch (IOException e) {
-								System.err.println("Cannot connect to " + servers.get(i).getName());
+								System.err.println("[main] DEBUG: Cannot connect to " + servers.get(i).getName());
 								System.exit(1);
 							}
 						}
@@ -92,20 +93,20 @@ public class client {
 					cmd = lineScanner.next();
 					if(cmd.equalsIgnoreCase("add")) {
 						doLocalAdd(lineScanner, servers, clientName, fromUser);
-					}
+					}/*
 					else if(cmd.equalsIgnoreCase("get")) {
 						doGet(lineScanner, servers, clientName, fromUser);
-					}
+					}*/
 					else {
-						doSendNRecv(servers, clientName, fromUser);
+						doSendCmd(servers, clientName, fromUser);
 					}
 				}
 			}
 		} catch (UnknownHostException e) {
-			System.err.println("Don't know about host ");
+			System.err.println("[main] DEBUG: Don't know about host ");
 			System.exit(1);
 		} catch (IOException e) {
-			System.err.println("Don't know about host ");									 
+			System.err.println("[main] DEBUG: Don't know about host ");
 			System.exit(1);
 		}
 	}
@@ -116,12 +117,12 @@ public class client {
 	
 	private static void doGet(Scanner lineScanner, ArrayList<ServerInfo> servers, String clientName, String fromUser) throws IOException, UnknownHostException {
 		if(!lineScanner.hasNext()) {
-			System.out.println("missing the topic name");
+			System.out.println("[doGet] DEBUG: missing the topic name");
 			return;
 		}
 		String topicName = lineScanner.next().substring(7);//skip "(topic=" at the beginning
 		if(!lineScanner.hasNext()) {
-			System.out.println("missing the partition number");
+			System.out.println("[doGet] DEBUG: missing the partition number");
 			return;
 		}
 		String str = lineScanner.next();
@@ -135,14 +136,14 @@ public class client {
 		String serverName = servers.get(svrNum).getName();
 		String serverIP = servers.get(svrNum).getIP();
 		int serverPort = servers.get(svrNum).getPort();
-		System.out.println(clientName + "> " + "DEBUG: " + serverName + " " + serverIP + " " + serverPort);
+		System.out.println(clientName + "> " + "[doGet] DEBUG: " + serverName + " " + serverIP + " " + serverPort);
 		
 		try {
 			Socket socket = new Socket(serverIP, serverPort);
 			PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 			BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			
-			System.out.println(clientName + "> " + "DEBUG: connected to the server " + serverName);
+			System.out.println(clientName + "> " + "[doGet] DEBUG: connected to the server " + serverName);
 			out.println(clientName + " " + fromUser); //send the get cmd to the backup server
 			/*
 			String fromServer = in.readLine();
@@ -157,9 +158,9 @@ public class client {
 			out.close();
 			socket.close();
 		} catch (UnknownHostException e) {
-			System.err.println("cannot connect to " + serverName + ", will try to connect to the backup server");
+			System.err.println("[doGet] DEBUG: cannot connect to " + serverName + ", will try to connect to the backup server");
 		} catch (IOException e) {
-			System.err.println("cannot connect to " + serverName + ", will try to connect to the backup server");
+			System.err.println("[doGet] DEBUG: cannot connect to " + serverName + ", will try to connect to the backup server");
 			
 			//int index = (svrNum+1)%servers.size();//select the following server in servers as the backup serverString serverName = servers.get(svrNum).getName();
 			int index = (svrNum-1+servers.size())%servers.size();//select the previous server in servers as the backup serverString serverName = servers.get(svrNum).getName();
@@ -170,7 +171,7 @@ public class client {
 			PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 			BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			
-			System.out.println(clientName + "> " + "DEBUG: connected to the backup server " + serverName);
+			System.out.println(clientName + "> " + "[doGet] DEBUG: connected to the backup server " + serverName);
 			out.println(clientName + " " + fromUser); //send the get cmd to the backup server
 			/*
 			String fromServer = in.readLine();
@@ -187,26 +188,26 @@ public class client {
 		}
 	}
 	
-	private static void doSendNRecv(ArrayList<ServerInfo> servers, String clientName, String fromUser) {
+	private static void doSendCmd(ArrayList<ServerInfo> servers, String clientName, String fromUser) {
 		for(int i = 0; i < servers.size(); i++) {
 			try {
 				Socket socket = new Socket(servers.get(i).getIP(), servers.get(i).getPort());
 				PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-				BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+				//BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 				out.println(clientName + " " + fromUser);//throws exception if out stream broken due to server disconnected
 				/*
 				String fromServer = in.readLine();
 				//System.out.println(clientName + "> " + servers.get(i).getName() + ": " + fromServer);
 				System.out.println(clientName + "> " + fromServer); //NOT display server name to avoid possible arrayoutofbound access exception
 				*/
-				in.close();
+				//in.close();
 				out.close();
 				socket.close();
 			} catch (UnknownHostException e) {
-				System.err.println("Cannot connect to " + servers.get(i).getName());
+				System.err.println("[doSendCmd] DEBUG: Cannot connect to " + servers.get(i).getName());
 				//System.exit(1);
 			} catch (IOException e) {
-				System.err.println("Cannot connect to " + servers.get(i).getName());
+				System.err.println("[doSendCmd] DEBUG: Cannot connect to " + servers.get(i).getName());
 				//System.exit(1);
 			}
 		}
@@ -229,7 +230,7 @@ public class client {
 			int serverPort = Integer.parseInt(portStr.substring(0, portStr.length()-1));//skip the ')'
 			servers.add(new ServerInfo(serverName, serverIP, serverPort));//add the ServerInfo into the servers
 			currSvrs.add(new ServerInfo(serverName, serverIP, serverPort));
-			System.out.println(clientName + "> " + "DEBUG: " + serverName + " " + serverIP + " " + serverPort);
+			System.out.println(clientName + "> " + "[doLocalAdd] DEBUG: " + serverName + " " + serverIP + " " + serverPort);
 		}
 		
 		//connect with the newly added servers to establish the listen channels
@@ -250,10 +251,10 @@ public class client {
 				in.add(new BufferedReader(new InputStreamReader(socket.get(i).getInputStream())));
 			}
 		} catch (UnknownHostException e) {
-			System.err.println("DEBUG: cannot connect to " + svrName);
+			System.err.println("[doLocalAdd] DEBUG: cannot connect to " + svrName);
 			System.exit(1);
 		} catch (IOException e) {
-			System.err.println("DEBUG: cannot connect to " + svrName);
+			System.err.println("[doLocalAdd] DEBUG: cannot connect to " + svrName);
 			System.exit(1);
 		}
 		
@@ -262,7 +263,7 @@ public class client {
 			String addCmd = "add ";
 			for(int i = 0; i < servers.size(); i++) {
 				addCmd += "(name=" + servers.get(i).getName() + " " + "ip=" + servers.get(i).getIP() + " " + "port=" + servers.get(i).getPort() + ") ";
-				System.out.println("DEBUG: " + addCmd);
+				System.out.println("[doLocalAdd] DEBUG: " + addCmd);
 			}
 			
 			//send the add cmd to the previously added servers
@@ -287,7 +288,7 @@ public class client {
 		for(int i = 0; i < servers.size(); i++) {//possibly the servers size already changed
 			fromServer = in.get(i).readLine();
 			//System.out.println(clientName + "> " + fromServer);
-			System.out.println(clientName + "> " + servers.get(i).getName() + ": " + fromServer);
+			System.out.println(clientName + "> [doLocalAdd] DEBUG: " + servers.get(i).getName() + ": " + fromServer);
 		}
 		
 		//close the sockets and corresponding streams

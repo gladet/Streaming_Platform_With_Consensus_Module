@@ -52,3 +52,10 @@ work on recover from backup server -> update data/info
 backup after add/delete
 
 work on backup when add/delete servers->build a separate backup topics
+
+modifications to:
+FollowerThread: timeout mechanism
+CandThread: timeout mechanism
+ListenThread: 
+ClientThread:
+readme

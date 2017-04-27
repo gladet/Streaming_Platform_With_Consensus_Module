@@ -73,7 +73,22 @@ public class CandThread extends Thread {
 		reqVoteRPC();
 		
 		while((state=raftData.getState()) == CANDIDATE) {
+			candStartTime = raftData.getCandStartTime();//update candStartTime with raftData's candStartTime
+			long interval = (long) (timeoutInterval/10);
 			long currTime = new GregorianCalendar().getTimeInMillis();//get the current system time
+			if(currTime - candStartTime < interval) {
+				//Thread.sleep(timeoutInterval-150);
+				try {
+					Thread.sleep(timeoutInterval-interval-120);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			candStartTime = raftData.getCandStartTime();//update candStartTime with raftData's candStartTime
+			//currTime = System.currentTimeMillis();//get the current system time
+			currTime = new GregorianCalendar().getTimeInMillis();//get the current system time
 			//resend the request vote RPC when timeout and state is still CANDIDATE
 			if(((state=raftData.getState()) == CANDIDATE) && (currTime - candStartTime > timeoutInterval)) {
 				currTerm = raftData.getCurrTerm();

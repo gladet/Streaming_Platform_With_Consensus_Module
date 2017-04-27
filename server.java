@@ -7,8 +7,50 @@ import java.util.Map;
 import java.util.HashSet;
 import java.lang.Runtime;
 import java.util.Scanner;
+import java.util.Enumeration;
 
 public class server {
+	private static InetAddress getLocalAddress(){
+		try {
+			Enumeration<NetworkInterface> b = NetworkInterface.getNetworkInterfaces();
+			while( b.hasMoreElements()){
+				NetworkInterface currNetInterface = b.nextElement();
+				for ( InterfaceAddress f : currNetInterface.getInterfaceAddresses()) {
+					//System.out.println("[getLocalAddress] DEBUG: current address: " + f.getAddress().getHostAddress());
+					if ( f.getAddress().isSiteLocalAddress())
+						return f.getAddress();
+				}
+			}
+		} catch (SocketException e) {
+			e.printStackTrace();
+		} catch (NullPointerException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public static String getLocalIpAddress()
+	{
+		try {
+			for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+				NetworkInterface intf = en.nextElement();
+				
+				if (intf.getName().equals("eth0")) { //eth0 //en0
+					for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+						InetAddress inetAddress = enumIpAddr.nextElement();
+						//System.out.println("[getLocalIpAddress] DEBUG: current address: " + inetAddress.getHostAddress());
+						if (!inetAddress.isLoopbackAddress() && (inetAddress instanceof Inet4Address)) {
+							return inetAddress.getHostAddress();
+						}
+					}
+				}
+			}
+		} catch (SocketException ex) {
+			ex.printStackTrace();
+		}
+		return null;
+	}
+	
 	public static void main(String[] args) throws IOException {
 		
 		if (args.length != 1) {
@@ -29,6 +71,8 @@ public class server {
 			serverSocket = new ServerSocket(portNumber);//create the serversocket with a port number automatically allocated by the system
 			//System.out.println("DEBUG: " + localServerName + " at IP address " + serverSocket.getInetAddress().getHostAddress() + " and port number: " + serverSocket.getLocalPort());
 			System.out.println("[server main] DEBUG: " + localServerName + " at IP address " + serverSocket.getInetAddress().getLocalHost().getHostAddress() + " and port number: " + serverSocket.getLocalPort());
+			//System.out.println("[server main] DEBUG: " + localServerName + " at IP address " + getLocalAddress().getHostAddress() + " and port number: " + serverSocket.getLocalPort());
+			//System.out.println("[server main] DEBUG: " + localServerName + " at IP address " + getLocalIpAddress() + " and port number: " + serverSocket.getLocalPort());
 		} catch (IOException e) {
 			//System.err.println("Could not listen on port " + portNumber);
 			System.err.println("creating serversocket failed");
@@ -46,7 +90,8 @@ public class server {
 		
 		Scanner inServers = null;
 		//String localDir = "/tmp/92476/stream";
-		String localDir = "/Users/gladet/csc502/stream";
+		//String localDir = "/Users/gladet/csc502/stream";
+		String localDir = "../stream";
 		String inFileName = localDir+"/serversInfo"; //the local file to store the servers info, using absolute path
 		try {
 			inServers = new Scanner(new File(inFileName));
@@ -83,11 +128,13 @@ public class server {
 						}
 						else if(cmd.equalsIgnoreCase("n")) {
 							try {
-								Runtime.getRuntime().exec("rm " + inFileName);//remove the file
+								Runtime.getRuntime().exec("rm " + inFileName);//remove serversInfo file
 								inFileName = localDir+"/"+localServerName+"_data";
-								Runtime.getRuntime().exec("rm " + inFileName);//remove the file
+								Runtime.getRuntime().exec("rm " + inFileName);//remove data file
 								inFileName = localDir+"/"+localServerName+"_info";
-								Runtime.getRuntime().exec("rm " + inFileName);//remove the file
+								Runtime.getRuntime().exec("rm " + inFileName);//remove info file
+								inFileName = localDir+"/"+localServerName+"_log";
+								Runtime.getRuntime().exec("rm " + inFileName);//remove log file
 								break;
 							} catch(IOException e) {
 								System.out.println("[server main] DEBUG: cannot delete local info files: "+inFileName);
@@ -112,19 +159,20 @@ public class server {
 		}
 		
 		if(svrCrashed == true) {
+			/*
+			 if(servers.size()==1) {//only one server
+				recoverFrFile(svrData, localServerName);
+			 }*/
+			recoverFrFile(svrData, localServerName, raftData);//need to recover the backup data
+			//print log
+			raftData.printLog();
+			
 			//listen to all servers
 			for(int i = 0; i < servers.size(); i++) {
 				new ListenThread(localServerName, servers, servers.get(i), raftData).start();
 			}
 			//start the FollowerThread
 			new FollowerThread(localServerName, servers, raftData).start();
-			/*
-			if(servers.size()==1) {//only one server
-				recoverFrFile(svrData, localServerName);
-			}*/
-			recoverFrFile(svrData, localServerName, raftData);//need to recover the backup data
-			//print log
-			raftData.printLog();
 			
 			//notify all the servers to rewrite the server port number in the servers file
 			//connected to all the servers except itself
@@ -142,6 +190,7 @@ public class server {
 						//get and display ack message fr the server
 						String ackMsg = inSvr.nextLine();
 						System.out.println("[server main] DEBUG: from " + servers.get(i).getName() + ": " + ackMsg);
+						
 						/* //NOT recover fr backup server after deploying consensus mdoule
 						// check if servers.get(i) is the backup server of localServerName
 						if(backupSvrName.equals(servers.get(i).getName())) { //servers.get(i) is the back up server
@@ -149,11 +198,15 @@ public class server {
 							recoverfrBkpSvr(svrData, inSvr);
 						}
 						*/
+						
+						/* //NOT backup the reverse-backup server after deploying consensus mdoule
 						// check if localServerName is the backup server of servers.get(i)
 						String rvBkpSvr = backupSvr(servers, servers.get(i).getName());
 						if(localServerName.equals(rvBkpSvr)) {
 							recoverBkp(svrData, inSvr);
 						}
+						*/
+						
 						//close the socket and corresponding streams
 						inSvr.close();
 						outSvr.close();
@@ -177,7 +230,8 @@ public class server {
 			//initialize the serversInfo file reader
 			try {
 				//localDir = "/tmp/92476/stream";
-				localDir = "/Users/gladet/csc502/stream";
+				//localDir = "/Users/gladet/csc502/stream";
+				localDir = "../stream";
 				outFileName = localDir+"/serversInfo";
 				
 				//outFileName = "serversInfo"; //the local file to store the servers info, using relative path
@@ -418,7 +472,8 @@ public class server {
 		//recover log
 		Scanner inLog = null;
 		//String localDir = "/tmp/92476/stream";
-		String localDir = "/Users/gladet/csc502/stream";
+		//String localDir = "/Users/gladet/csc502/stream";
+		String localDir = "../stream";
 		String inFileName = localDir+"/"+localServerName+"_log"; //the local file to store the log, using absolute path
 		try {
 			inLog = new Scanner(new File(inFileName));
@@ -440,8 +495,9 @@ public class server {
 		}
 		
 		Scanner inData = null;
-		localDir = "/tmp/92476/stream";
-		//String localDir = "/Users/gladet/csc502/stream";
+		//localDir = "/tmp/92476/stream";
+		//localDir = "/Users/gladet/csc502/stream";
+		localDir = "../stream";
 		inFileName = localDir+"/"+localServerName+"_data"; //the local file to store the servers info, using absolute path
 		try {
 			inData = new Scanner(new File(inFileName));
@@ -484,8 +540,9 @@ public class server {
 		}
 		
 		Scanner inInfo = null;
-		localDir = "/tmp/92476/stream";
+		//localDir = "/tmp/92476/stream";
 		//localDir = "/Users/gladet/csc502/stream";
+		localDir = "../stream";
 		inFileName = localDir+"/"+localServerName+"_info"; //the local file to store the servers info, using absolute path
 		try {
 			inInfo = new Scanner(new File(inFileName));

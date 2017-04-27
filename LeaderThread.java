@@ -92,10 +92,10 @@ public class LeaderThread extends Thread {
 				outSvr.close();
 				currSocket.close();
 			} catch (UnknownHostException e) {
-				System.err.println("[doAppendRPC] DEBUG: Cannot connect to " + servers.get(i).getName());
+				//System.err.println("[doAppendRPC] DEBUG: Cannot connect to " + servers.get(i).getName());
 				//System.exit(1);
 			} catch (IOException e) {
-				System.err.println("[doAppendRPC] DEBUG: Cannot connect to " + servers.get(i).getName());
+				//System.err.println("[doAppendRPC] DEBUG: Cannot connect to " + servers.get(i).getName());
 				//System.exit(1);
 			}
 			/*committedIndex = raftData.getCommittedIndex();

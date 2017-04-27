@@ -30,13 +30,15 @@ public class RaftData {
 	private Map<String, Integer> cltCmdIndex;
 	private String votedFor;
 	private int lastApplied;
+	private FollowerThread followerThread;
+	private long timeoutInterval;
 	
 	private static final int FOLLOWER = 0;
 	
 	//constructor
 	public RaftData() {
 		serverSockets = new HashMap<String, Socket>();
-		state = FOLLOWER;
+		state = FOLLOWER;//state is initiated as FOLLOWER by default
 		currTerm = 0;
 		votes = 0;
 		log = new ArrayList<LogEntry>();
@@ -50,6 +52,8 @@ public class RaftData {
 		cltCmdIndex = new HashMap<String, Integer>();
 		votedFor = "";
 		lastApplied = -1;
+		followerThread = null;
+		timeoutInterval = 0;
 	}
 	
 	public void writeLog(String localServerName) {
@@ -57,7 +61,8 @@ public class RaftData {
 		String outFileName = null;
 		try {
 			//String localDir = "/tmp/92476/stream";
-			String localDir = "/Users/gladet/csc502/stream";
+			//String localDir = "/Users/gladet/csc502/stream";
+			String localDir = "../stream";
 			outFileName = localDir+"/"+localServerName+"_log";
 			
 			outLog = new PrintWriter(outFileName);
@@ -164,6 +169,14 @@ public class RaftData {
 		return lastApplied;
 	}
 	
+	public FollowerThread getFollowerThread() {
+		return this.followerThread;
+	}
+	
+	public long getTimeoutInterval() {
+		return this.timeoutInterval;
+	}
+	
 	//set methods
 	public void setState(int state) {
 		this.state = state;
@@ -223,5 +236,13 @@ public class RaftData {
 	
 	public void setLastApplied(int lastApplied) {
 		this.lastApplied = lastApplied;
+	}
+	
+	public void setFollowerThread(FollowerThread followerThread) {
+		this.followerThread = followerThread;
+	}
+	
+	public void setTimeoutInterval(long timeoutInterval) {
+		this.timeoutInterval = timeoutInterval;
 	}
 }
